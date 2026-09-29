@@ -1,6 +1,11 @@
 // Shared in-memory registration store.
 // In production: replace with PostgreSQL / Prisma.
 
+// ─────────────────────────────────────────────────────────
+// Registration cap
+// ─────────────────────────────────────────────────────────
+export const REGISTRATION_LIMIT = 200;
+
 export type PendingRegistration = {
   name: string;
   registerNo: string;
@@ -8,7 +13,7 @@ export type PendingRegistration = {
   phone: string;
   department: string;
   year: string;
-  status: "PENDING_PAYMENT" | "PAID" | "PAYMENT_FAILED";
+  status: "PENDING_PAYMENT" | "SUBMITTED" | "PAID" | "PAYMENT_FAILED";
   amount: number;
   registrationId: string | null;
   paymentId: string | null;
@@ -18,6 +23,20 @@ export type PendingRegistration = {
 
 const store = new Map<string, PendingRegistration>();
 
+// ── Seat count ──────────────────────────────────────────
+export function getRegistrationCount(): number {
+  return store.size;
+}
+
+export function isRegistrationOpen(): boolean {
+  return store.size < REGISTRATION_LIMIT;
+}
+
+export function getAvailableSeats(): number {
+  return Math.max(0, REGISTRATION_LIMIT - store.size);
+}
+
+// ── CRUD ────────────────────────────────────────────────
 export function getRegistration(id: string) {
   return store.get(id);
 }

@@ -1143,3 +1143,73 @@ th { color: var(--navy); font-size: 11px; font-weight: 800; letter-spacing: .06e
   .pending-ref-id { font-size: 22px; }
   .utr-input { font-size: 14px; }
 }
+
+/* ---- SCREENSHOT UPLOAD SECTION ---- */
+.screenshot-section { display: grid; gap: 10px; }
+.screenshot-label-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.screenshot-optional-badge {
+  background: #f0ede4; color: var(--muted);
+  font: 700 9px "Oswald"; letter-spacing: .1em; padding: 3px 8px;
+}
+.screenshot-desc { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.6; }
+
+/* Upload drop zone */
+.screenshot-upload-area {
+  display: grid; justify-items: center; gap: 8px;
+  border: 2px dashed #c8c4b8; padding: 28px 20px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+  text-align: center; position: relative;
+}
+.screenshot-upload-area:hover { border-color: var(--navy); background: rgba(23,45,97,.03); }
+.screenshot-upload-icon { color: var(--muted); }
+.screenshot-upload-text { font: 700 13px "DM Sans"; color: var(--navy); }
+.screenshot-upload-hint { font-size: 11px; color: var(--muted); }
+.screenshot-file-input {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+
+/* Preview */
+.screenshot-preview-wrap { display: grid; gap: 8px; }
+.screenshot-preview-img {
+  width: 100%; max-height: 280px; object-fit: contain;
+  border: 1px solid #ddd8ca; background: #f9f7f2;
+  image-rendering: auto;
+}
+.screenshot-preview-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.screenshot-preview-name { font-size: 12px; color: var(--muted); word-break: break-all; }
+.screenshot-remove-btn {
+  display: flex; align-items: center; gap: 5px;
+  border: 1px solid #ddd; background: white; color: var(--red);
+  font: 600 11px "DM Sans"; padding: 5px 10px; cursor: pointer;
+  transition: all .15s; flex-shrink: 0;
+}
+.screenshot-remove-btn:hover { background: var(--red); color: white; border-color: var(--red); }
+.screenshot-error { font-size: 12px; color: var(--red); font-weight: 600; margin: 0; }
+
+/* Screenshot thumbnail on submitted page */
+.submitted-screenshot-wrap {
+  width: 100%; display: grid; gap: 8px; justify-items: center; text-align: center;
+}
+.submitted-screenshot-img {
+  max-width: 100%; max-height: 300px; object-fit: contain;
+  border: 1px solid #ddd8ca; background: #f9f7f2;
+}
+
+/* ---- ADMIN SCREENSHOT ---- */
+.admin-screenshot-wrap { display: grid; gap: 8px; }
+.admin-screenshot-label {
+  font: 700 10px "Oswald"; letter-spacing: .1em; color: var(--muted); margin: 0;
+}
+.admin-screenshot-img {
+  width: 100%; max-height: 400px; object-fit: contain;
+  border: 1px solid #ddd8ca; background: #f9f7f2;
+  cursor: zoom-in;
+}
+.admin-screenshot-name { font-size: 11px; color: var(--muted); }
+.no-screenshot-note {
+  font-size: 12px; color: var(--muted); font-style: italic; margin: 0;
+  padding: 12px 0; border-top: 1px dashed #ddd;
+}

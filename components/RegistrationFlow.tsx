@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
   Clock3,
   Download,
+  ImagePlus,
   Loader2,
   MapPin,
   ShieldCheck,
+  Trash2,
   XCircle,
 } from "lucide-react";
 
@@ -46,7 +48,7 @@ type AdminStatus = {
 };
 
 const DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "Other"];
-const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+const YEARS = ["3rd Year", "4th Year"];
 
 const initialForm: FormData = {
   name: "",
@@ -61,6 +63,8 @@ const initialForm: FormData = {
 // Main component
 // ─────────────────────────────────────────────────────────
 
+const MAX_SCREENSHOT_SIZE_MB = 5;
+
 export default function RegistrationFlow() {
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState<FormData>(initialForm);
@@ -69,9 +73,13 @@ export default function RegistrationFlow() {
 
   const [pendingId, setPendingId] = useState("");
   const [utr, setUtr] = useState("");
+  const [screenshot, setScreenshot] = useState<string | null>(null); // base64 data URL
+  const [screenshotName, setScreenshotName] = useState("");
+  const [screenshotError, setScreenshotError] = useState("");
   const [submittedData, setSubmittedData] = useState<SubmittedData | null>(null);
   const [adminStatus, setAdminStatus] = useState<AdminStatus | null>(null);
   const [qrError, setQrError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const update = (key: keyof FormData, value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
@@ -108,7 +116,11 @@ export default function RegistrationFlow() {
       });
       const regData = await regRes.json();
       if (!regRes.ok) {
-        setErrorMsg(regData.message || "Failed to create registration. Please try again.");
+        if (regRes.status === 409 && regData.code === "SEATS_FULL") {
+          setErrorMsg("⚠ Registrations are now closed — all 200 seats have been filled. Thank you for your interest!");
+        } else {
+          setErrorMsg(regData.message || "Failed to create registration. Please try again.");
+        }
         return;
       }
       setPendingId(regData.pendingId);
@@ -118,6 +130,37 @@ export default function RegistrationFlow() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // ── Screenshot upload handler ──
+  function handleScreenshotUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    setScreenshotError("");
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type)) {
+      setScreenshotError("Only image files are allowed (JPG, PNG, WEBP).");
+      return;
+    }
+    if (file.size > MAX_SCREENSHOT_SIZE_MB * 1024 * 1024) {
+      setScreenshotError(`File is too large. Maximum size is ${MAX_SCREENSHOT_SIZE_MB}MB.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setScreenshot(ev.target?.result as string);
+      setScreenshotName(file.name);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeScreenshot() {
+    setScreenshot(null);
+    setScreenshotName("");
+    setScreenshotError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   // ── Step 3 → 4: Submit UTR ──
@@ -153,6 +196,7 @@ export default function RegistrationFlow() {
       setSubmittedData(submitted);
 
       // Save to localStorage for admin dashboard
+      // Note: screenshot stored as base64 — in production save to cloud storage instead
       window.localStorage.setItem("scorecraft-registration", JSON.stringify({
         pendingReferenceId: data.pendingReferenceId,
         registrationId: null,
@@ -165,6 +209,8 @@ export default function RegistrationFlow() {
         amount: 250,
         paymentMethod: "UPI_QR",
         utr: trimmed,
+        screenshot: screenshot ?? null,
+        screenshotName: screenshotName || null,
         paymentStatus: "SUBMITTED",
         registrationStatus: "PENDING_VERIFICATION",
         submittedAt: new Date().toISOString(),
@@ -207,10 +253,14 @@ export default function RegistrationFlow() {
     setErrorMsg("");
     setPendingId("");
     setUtr("");
+    setScreenshot(null);
+    setScreenshotName("");
+    setScreenshotError("");
     setSubmittedData(null);
     setAdminStatus(null);
     setQrError(false);
     setIsLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   const isSubmitted = step === "submitted";
@@ -428,6 +478,53 @@ export default function RegistrationFlow() {
             </p>
           </div>
 
+          {/* ── Payment screenshot upload ── */}
+          <div className="screenshot-section">
+            <div className="screenshot-label-row">
+              <span className="utr-label-text">PAYMENT SCREENSHOT</span>
+              <span className="screenshot-optional-badge">OPTIONAL BUT RECOMMENDED</span>
+            </div>
+            <p className="screenshot-desc">
+              Upload a screenshot of your payment confirmation from your UPI app.
+              This helps the admin verify your payment faster.
+            </p>
+
+            {!screenshot ? (
+              <label className="screenshot-upload-area" htmlFor="screenshot-input">
+                <ImagePlus size={28} className="screenshot-upload-icon" />
+                <span className="screenshot-upload-text">Click to upload payment screenshot</span>
+                <span className="screenshot-upload-hint">JPG, PNG, WEBP · Max {MAX_SCREENSHOT_SIZE_MB}MB</span>
+                <input
+                  id="screenshot-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleScreenshotUpload}
+                  className="screenshot-file-input"
+                />
+              </label>
+            ) : (
+              <div className="screenshot-preview-wrap">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={screenshot}
+                  alt="Payment screenshot preview"
+                  className="screenshot-preview-img"
+                />
+                <div className="screenshot-preview-meta">
+                  <span className="screenshot-preview-name">{screenshotName}</span>
+                  <button className="screenshot-remove-btn" onClick={removeScreenshot} type="button">
+                    <Trash2 size={14} /> Remove
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {screenshotError && (
+              <p className="screenshot-error" role="alert">{screenshotError}</p>
+            )}
+          </div>
+
           {errorMsg && <div className="error-box" role="alert">{errorMsg}</div>}
 
           <div className="step-actions">
@@ -517,8 +614,22 @@ export default function RegistrationFlow() {
             <ConfRow label="Amount"           value="₹250/-" />
             <ConfRow label="Payment Method"   value="UPI QR" />
             <ConfRow label="UTR / Txn ID"     value={submittedData.utr} mono />
+            <ConfRow label="Screenshot"       value={screenshot ? `✓ ${screenshotName}` : "Not uploaded"} />
             <ConfRow label="Payment Status"   value="SUBMITTED — PENDING VERIFICATION" highlight />
           </div>
+
+          {/* Screenshot thumbnail on submitted page */}
+          {screenshot && (
+            <div className="submitted-screenshot-wrap">
+              <span className="utr-label-text">PAYMENT SCREENSHOT SUBMITTED</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={screenshot}
+                alt="Your submitted payment screenshot"
+                className="submitted-screenshot-img"
+              />
+            </div>
+          )}
 
           {errorMsg && <div className="error-box" role="alert">{errorMsg}</div>}
 

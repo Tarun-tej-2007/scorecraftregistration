@@ -23,6 +23,8 @@ type Registration = {
   amount?: number;
   paymentMethod?: string;
   utr?: string;
+  screenshot?: string | null;      // base64 data URL
+  screenshotName?: string | null;
   paymentStatus?: PaymentStatus;
   registrationStatus?: RegistrationStatus;
   submittedAt?: string;
@@ -281,6 +283,25 @@ export default function AdminDashboard() {
               <div className="vdt-row"><span>UTR / Txn ID</span><b className="utr-highlight">{registration?.utr ?? "—"}</b></div>
               <div className="vdt-row"><span>Submitted At</span><b>{registration?.submittedAt ? new Date(registration.submittedAt).toLocaleString() : "—"}</b></div>
             </div>
+
+            {/* Screenshot preview in verify card */}
+            {registration?.screenshot && (
+              <div className="admin-screenshot-wrap">
+                <p className="admin-screenshot-label">PAYMENT SCREENSHOT (submitted by participant)</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={registration.screenshot}
+                  alt="Payment screenshot"
+                  className="admin-screenshot-img"
+                />
+                {registration.screenshotName && (
+                  <small className="admin-screenshot-name">{registration.screenshotName}</small>
+                )}
+              </div>
+            )}
+            {!registration?.screenshot && (
+              <p className="no-screenshot-note">No screenshot was uploaded by the participant.</p>
+            )}
 
             <div className="verify-actions">
               <button

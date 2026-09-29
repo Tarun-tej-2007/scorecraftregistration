@@ -5,7 +5,7 @@ import { Registration } from "@/lib/models/Registration";
 // ─────────────────────────────────────────────────────────
 // POST /api/payment/submit-utr
 //
-// Records UTR + optional screenshot in MongoDB.
+// Records UTR + payment screenshot in MongoDB.
 // Changes status: PENDING_PAYMENT → PENDING_VERIFICATION
 // Does NOT confirm the registration.
 // Admin must verify independently.
@@ -40,6 +40,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid characters in UTR." }, { status: 400 });
     }
 
+    if (!screenshot || typeof screenshot !== "string" || !screenshot.trim()) {
+      return NextResponse.json({ message: "Payment screenshot is required." }, { status: 400 });
+    }
+
     // ── Find registration ───────────────────────────────
     const reg = await Registration.findById(pendingId);
     if (!reg) {
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
 
     // ── Update registration ─────────────────────────────
     reg.utr = trimmedUtr;
-    reg.screenshot = screenshot ?? null;
+    reg.screenshot = screenshot;
     reg.screenshotName = screenshotName ?? null;
     reg.paymentStatus = "SUBMITTED";
     reg.registrationStatus = "PENDING_VERIFICATION";

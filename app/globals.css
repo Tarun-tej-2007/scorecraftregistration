@@ -1247,3 +1247,186 @@ th { color: var(--navy); font-size: 11px; font-weight: 800; letter-spacing: .06e
   display: flex; align-items: center; gap: 12px;
   padding: 40px; color: var(--muted); font-size: 14px;
 }
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN PASS
+   Keeps the existing visual system while letting each surface
+   breathe at desktop, tablet, and phone widths.
+══════════════════════════════════════════════════════════ */
+html, body { max-width: 100%; overflow-x: hidden; }
+img { max-width: 100%; height: auto; }
+.section-shell, .admin-shell { width: min(1180px, calc(100% - 48px)); }
+.nav { padding-inline: max(24px, calc((100vw - 1180px) / 2)); }
+.hero { grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr); }
+.hero-event-title { font-size: clamp(40px, 4.55vw, 72px); overflow-wrap: anywhere; }
+.hero-copy, .hero-art, .registration-section > *, .registration-card { min-width: 0; }
+.hero-desc { max-width: 48ch; }
+.feature-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.feature-card { min-width: 0; }
+.date-strip > div, .date-strip span, .review-row, .conf-row, .vdt-row { min-width: 0; }
+.date-strip span, .review-row-value, .conf-row b, .vdt-row b { overflow-wrap: anywhere; }
+.registration-section { grid-template-columns: minmax(250px, .7fr) minmax(0, 1.3fr); }
+.registration-card { padding: clamp(24px, 3vw, 38px); }
+.step-heading-text, .confirmed-heading, .pending-heading, .failed-heading { overflow-wrap: anywhere; }
+.review-event-name, .pay-event-name { overflow-wrap: anywhere; }
+.qr-code-img, .qr-placeholder { width: clamp(200px, 45vw, 260px); height: auto; aspect-ratio: 1; }
+.qr-placeholder { height: clamp(200px, 45vw, 260px); }
+.table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+
+@media (min-width: 1440px) {
+  .section-shell, .admin-shell { width: min(1240px, calc(100% - 96px)); }
+  .hero { min-height: 760px; gap: clamp(48px, 5vw, 88px); }
+  .hero-event-title { font-size: clamp(52px, 5vw, 82px); }
+  .art-canvas { max-width: 500px; height: 520px; }
+  .section-paper { padding-block: clamp(96px, 7vw, 120px); }
+}
+
+@media (max-width: 1100px) {
+  .hero { gap: 28px; }
+  .hero-event-title { font-size: clamp(38px, 5vw, 60px); }
+  .registration-section { gap: 38px; }
+  .register-intro h2 { font-size: clamp(48px, 6vw, 62px); }
+  .registration-card { padding: 28px; }
+  .date-strip { gap: 18px; padding-inline: 22px; }
+}
+
+@media (max-width: 900px) {
+  .section-shell, .admin-shell { width: min(94%, 720px); }
+  .nav { padding-inline: 3%; }
+  .nav-register { min-height: 44px; }
+  .hero { grid-template-columns: 1fr; padding-block: clamp(44px, 8vw, 72px); }
+  .hero-copy { max-width: 680px; }
+  .hero-art { min-height: clamp(330px, 48vw, 420px); }
+  .art-canvas { width: min(100%, 430px); height: clamp(340px, 48vw, 420px); }
+  .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .feature-card { min-height: 200px; }
+  .timeline { margin-top: 44px; }
+  .date-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .date-strip > div:last-child { grid-column: 1 / -1; }
+  .registration-section { grid-template-columns: 1fr; gap: 30px; }
+  .register-intro { max-width: 680px; }
+  .register-intro h2 { font-size: clamp(48px, 8vw, 62px); }
+  .organizer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-shell { margin-block: 36px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats div:last-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 600px) {
+  .section-shell, .admin-shell { width: 92%; }
+  .nav { min-height: 60px; padding: 8px 4%; gap: 10px; }
+  .brand-name { font-size: 16px; }
+  .nav-logo-img { width: 34px; height: 34px; }
+  .nav-register { display: none; }
+  .menu-button { display: grid; place-items: center; width: 44px; height: 44px; margin-left: auto; }
+  .nav-links { top: 60px; padding: 14px 4% 18px; gap: 4px; box-shadow: 0 12px 24px rgba(23,45,97,.08); }
+  .nav-links button { min-height: 44px; text-align: left; font-size: 15px; }
+
+  .hero { gap: 28px; padding-block: 42px 48px; }
+  .hero-club-block { gap: 11px; margin-bottom: 20px; }
+  .hero-logo-img { width: clamp(58px, 18vw, 78px); height: auto; }
+  .hero-club-name { font-size: clamp(19px, 5.5vw, 24px); }
+  .hero-event-title { font-size: clamp(38px, 10.8vw, 58px); line-height: .98; letter-spacing: -.015em; }
+  .hero-workshop-tag { max-width: 100%; font-size: 9px; line-height: 1.35; letter-spacing: .12em; }
+  .hero-desc { font-size: 14px; line-height: 1.65; }
+  .hero-meta-item { align-items: flex-start; line-height: 1.45; }
+  .hero-cta-row { align-items: stretch; gap: 13px; }
+  .hero-cta-row .primary-button { min-height: 48px; justify-content: center; }
+  .micro-note { align-self: center; }
+  .hero-art { min-height: 290px; }
+  .art-canvas { height: 300px; transform: scale(.92); transform-origin: center; }
+  .art-bg-circle { width: 245px; height: 245px; }
+  .art-card { max-width: calc(100% - 24px); white-space: normal; }
+
+  .section-paper { padding-block: 64px; }
+  .schedule-section, .organizers { padding-block: 62px 72px; }
+  .section-heading.centered { margin-bottom: 34px; }
+  .section-heading h2 { font-size: clamp(38px, 11vw, 52px); }
+  .section-heading h2 br { display: none; }
+  .feature-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 34px; }
+  .feature-card, .feature-card:nth-child(2), .feature-card:nth-child(3) { min-height: 0; padding: 22px 20px; transform: none; }
+  .feature-icon { margin-bottom: 20px; }
+  .timeline { margin: 38px 0 42px 8px; }
+  .timeline-item { padding: 16px 16px 18px; }
+  .timeline-item h3 { margin-top: 8px; font-size: 20px; }
+  .date-strip { grid-template-columns: 1fr; padding: 20px 18px; gap: 18px; box-shadow: 5px 5px 0 var(--yellow); }
+  .date-strip > div:last-child { grid-column: auto; }
+  .credit-card { padding: 22px 18px; box-shadow: 5px 5px 0 var(--yellow); }
+  .credit-grid { gap: 16px; }
+  .credit-value { font-size: 36px; }
+
+  .registration-section { padding-block: 66px 76px; }
+  .register-intro { padding-top: 0; }
+  .register-intro h2 { font-size: clamp(48px, 14vw, 62px); }
+  .reg-event-title { line-height: 1.12; }
+  .registration-card { padding: 22px 16px; box-shadow: 6px 6px 0 rgba(23,45,97,.1); }
+  .form-grid { grid-template-columns: 1fr; gap: 16px; }
+  .field-label input, .field-label select { min-height: 48px; padding-block: 13px; font-size: 14px; }
+  .form-title { gap: 11px; padding-bottom: 16px; margin-bottom: 18px; }
+  .form-title.second { margin-top: 26px; }
+  .form-title b { font-size: 17px; }
+  .payment-row { align-items: stretch; gap: 16px; }
+  .payment-row .primary-button, .step-actions .primary-button { width: 100%; min-height: 48px; justify-content: center; }
+  .step-actions { align-items: stretch; }
+  .step-back-btn { justify-content: center; min-height: 44px; }
+  .reg-progress { gap: 6px; margin-bottom: 22px; padding-bottom: 16px; }
+  .prog-label { font-size: 8px; letter-spacing: .04em; }
+  .prog-line { min-width: 8px; }
+  .step-heading-text { font-size: clamp(32px, 10vw, 40px); }
+  .review-row, .conf-row { align-items: flex-start; gap: 12px; padding: 11px 12px; }
+  .review-row-value, .conf-row b { max-width: 64%; text-align: right; }
+  .review-event-meta { display: grid; gap: 8px; }
+  .pay-summary-box { padding: 18px 16px; }
+  .pay-meta-row { align-items: flex-start; flex-wrap: wrap; line-height: 1.5; }
+  .qr-payment-box { gap: 18px; }
+  .qr-amount-banner { padding: 13px 16px; }
+  .qr-code-wrap, .qr-instructions { padding-inline: 16px; }
+  .qr-amount-warning { margin-inline: 16px; padding-inline: 14px; }
+  .qr-steps-list { padding-left: 18px; }
+  .utr-input { min-height: 50px; font-size: 15px; }
+  .screenshot-upload-area { min-height: 150px; padding-inline: 14px; }
+  .pending-ref-id { max-width: 100%; font-size: clamp(18px, 6vw, 24px); overflow-wrap: anywhere; }
+  .admin-confirmed-banner, .admin-rejected-banner { align-items: flex-start; padding: 14px; }
+  .confirmed-actions { width: 100%; }
+  .confirmed-actions .secondary-button { width: 100%; margin-top: 0; }
+  .success-state { min-height: 380px; padding: 20px 8px; }
+  .success-state h3 { font-size: 38px; }
+  .registration-id { max-width: 100%; font-size: clamp(18px, 6vw, 24px); overflow-wrap: anywhere; }
+
+  .organizer-grid { grid-template-columns: 1fr; gap: 12px; }
+  .org-card { padding: 18px; }
+  footer { padding: 44px 4%; }
+  .footer-brand { font-size: clamp(30px, 10vw, 42px); }
+  .footer-event-name { overflow-wrap: anywhere; line-height: 1.35; }
+
+  .admin-top { padding: 14px 4%; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .admin-brand { order: -1; width: 100%; }
+  .admin-shell { margin-block: 28px; }
+  .admin-heading h1 { font-size: clamp(42px, 13vw, 56px); }
+  .admin-heading > div:last-child { width: 100%; }
+  .admin-heading > div:last-child button { flex: 1; min-height: 44px; justify-content: center; }
+  .stats { grid-template-columns: 1fr; gap: 10px; margin-block: 24px; }
+  .stats div:last-child { grid-column: auto; }
+  .stats div { padding: 17px; }
+  .stats strong { font-size: 36px; }
+  .admin-table-card { padding: 14px; }
+  .admin-verify-card { padding: 18px 14px; }
+  .vdt-row { align-items: flex-start; padding-inline: 10px; }
+  .vdt-row b { max-width: 62%; }
+  .verify-actions { display: grid; }
+  .verify-actions .primary-button, .verify-actions .reject-btn { width: 100%; justify-content: center; min-height: 46px; }
+  .admin-modal-overlay { padding: 12px; }
+  .admin-modal { max-height: calc(100vh - 24px); overflow-y: auto; padding: 28px 16px 20px; }
+  .modal-detail-grid { grid-template-columns: 1fr; gap: 3px; }
+  .modal-detail-grid b { margin-bottom: 7px; overflow-wrap: anywhere; }
+  .modal-actions { display: grid; }
+  .modal-actions button { width: 100%; justify-content: center; min-height: 46px; }
+}
+
+@media (max-width: 380px) {
+  .hero-event-title { font-size: clamp(35px, 10.5vw, 42px); }
+  .hero-workshop-tag { font-size: 8px; }
+  .reg-progress { gap: 3px; }
+  .prog-label { font-size: 7px; }
+  .registration-card { padding-inline: 13px; }
+}

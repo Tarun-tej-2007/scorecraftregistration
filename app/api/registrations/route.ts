@@ -7,6 +7,18 @@ const ALLOWED_YEARS = ["3rd Year", "4th Year"];
 
 export async function POST(request: Request) {
   try {
+    const body = await request.json();
+
+    const required = ["name", "registerNo", "email", "phone", "department", "year"];
+    const missing = required.filter((k) => !body?.[k]?.toString().trim());
+    if (missing.length) {
+      return NextResponse.json({ message: `Missing required fields: ${missing.join(", ")}` }, { status: 400 });
+    }
+
+    if (!ALLOWED_YEARS.includes(body.year)) {
+      return NextResponse.json({ message: "Only 3rd and 4th year students are eligible." }, { status: 400 });
+    }
+
     console.log("[/api/registrations] MONGODB_URI defined:", !!process.env.MONGODB_URI);
     await connectDB();
     console.log("[/api/registrations] DB connected successfully.");
@@ -20,18 +32,6 @@ export async function POST(request: Request) {
         { message: `Registrations are closed. All ${REGISTRATION_LIMIT} seats have been filled.`, code: "SEATS_FULL", availableSeats: 0 },
         { status: 409 }
       );
-    }
-
-    const body = await request.json();
-
-    const required = ["name", "registerNo", "email", "phone", "department", "year"];
-    const missing = required.filter((k) => !body?.[k]?.toString().trim());
-    if (missing.length) {
-      return NextResponse.json({ message: `Missing required fields: ${missing.join(", ")}` }, { status: 400 });
-    }
-
-    if (!ALLOWED_YEARS.includes(body.year)) {
-      return NextResponse.json({ message: "Only 3rd and 4th year students are eligible." }, { status: 400 });
     }
 
     const existing = await Registration.findOne({
@@ -75,7 +75,18 @@ export async function POST(request: Request) {
     const stack   = err instanceof Error ? err.stack   : "";
     console.error("[POST /api/registrations] ERROR:", message);
     console.error("[POST /api/registrations] STACK:", stack);
-    // Return detail temporarily so you can see it in the browser network tab
-    return NextResponse.json({ message: "Server error.", detail: message }, { status: 500 });
+    const isDatabaseConfigurationError =
+      message.includes("MONGODB_URI") ||
+      message.includes("connection string") ||
+      message.includes("URI option");
+
+    return NextResponse.json(
+      {
+        message: isDatabaseConfigurationError
+          ? "Registration service is temporarily unavailable. Please contact the organizer."
+          : "Server error.",
+      },
+      { status: isDatabaseConfigurationError ? 503 : 500 }
+    );
   }
 }

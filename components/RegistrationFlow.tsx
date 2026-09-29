@@ -167,6 +167,7 @@ export default function RegistrationFlow() {
   async function handleSubmitUTR() {
     setErrorMsg("");
     const trimmed = utr.trim();
+    if (!screenshot) { setErrorMsg("Please upload your payment screenshot."); return; }
     if (!trimmed) { setErrorMsg("Please enter your UTR / Transaction ID."); return; }
     if (trimmed.length < 6) { setErrorMsg("UTR / Transaction ID seems too short. Please check and try again."); return; }
     if (trimmed.length > 50) { setErrorMsg("UTR / Transaction ID is too long. Please check and try again."); return; }
@@ -480,11 +481,11 @@ export default function RegistrationFlow() {
           <div className="screenshot-section">
             <div className="screenshot-label-row">
               <span className="utr-label-text">PAYMENT SCREENSHOT</span>
-              <span className="screenshot-optional-badge">OPTIONAL BUT RECOMMENDED</span>
+              <span className="screenshot-optional-badge">REQUIRED</span>
             </div>
             <p className="screenshot-desc">
               Upload a screenshot of your payment confirmation from your UPI app.
-              This helps the admin verify your payment faster.
+              This is required so the admin can verify your payment.
             </p>
 
             {!screenshot ? (
@@ -496,6 +497,7 @@ export default function RegistrationFlow() {
                   id="screenshot-input"
                   ref={fileInputRef}
                   type="file"
+                  required
                   accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={handleScreenshotUpload}
                   className="screenshot-file-input"

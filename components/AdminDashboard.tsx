@@ -459,6 +459,7 @@ export default function AdminDashboard() {
                     <th>Dept.</th>
                     <th>Year</th>
                     <th>UTR</th>
+                    <th>Screenshot</th>
                     <th>Payment</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -476,6 +477,15 @@ export default function AdminDashboard() {
                       <td>{reg.department}</td>
                       <td>{reg.year}</td>
                       <td className="td-mono">{reg.utr ?? "—"}</td>
+                      <td>
+                        {(reg.paymentScreenshotKey || reg.screenshot) ? (
+                          <button className="tbl-screenshot-btn" onClick={() => viewScreenshot(reg)}>
+                            VIEW
+                          </button>
+                        ) : (
+                          <span className="td-muted">Not uploaded</span>
+                        )}
+                      </td>
                       <td><span className={`status-pill ${P_STATUS[reg.paymentStatus]?.cls ?? ""}`}>{P_STATUS[reg.paymentStatus]?.label ?? reg.paymentStatus}</span></td>
                       <td><span className={`status-pill ${R_STATUS[reg.registrationStatus]?.cls ?? ""}`}>{R_STATUS[reg.registrationStatus]?.label ?? reg.registrationStatus}</span></td>
                       <td>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
+import { storePaymentScreenshot, validatePaymentScreenshot } from "@/lib/paymentScreenshot";
 
 // ─────────────────────────────────────────────────────────
 // POST /api/payment/submit-utr
@@ -18,15 +19,22 @@ export async function POST(request: Request) {
   try {
     await connectDB();
 
-    const body = await request.json();
-    const { pendingId, utr, screenshot, screenshotName } = body;
+    if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) {
+      return NextResponse.json({ message: "Payment screenshot is required." }, { status: 400 });
+    }
 
-    if (!pendingId) {
+    const formData = await request.formData();
+    const pendingId = formData.get("pendingId");
+    const utr = formData.get("utr");
+    const screenshot = formData.get("screenshot");
+    const screenshotName = formData.get("screenshotName");
+
+    if (typeof pendingId !== "string" || !pendingId) {
       return NextResponse.json({ message: "Missing registration reference." }, { status: 400 });
     }
 
     // ── UTR validation ──────────────────────────────────
-    const trimmedUtr = (utr ?? "").toString().trim();
+    const trimmedUtr = (typeof utr === "string" ? utr : "").trim();
     if (!trimmedUtr) {
       return NextResponse.json({ message: "UTR / Transaction ID is required." }, { status: 400 });
     }
@@ -40,8 +48,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid characters in UTR." }, { status: 400 });
     }
 
-    if (!screenshot || typeof screenshot !== "string" || !screenshot.trim()) {
-      return NextResponse.json({ message: "Payment screenshot is required." }, { status: 400 });
+    let screenshotData;
+    try {
+      if (!(screenshot instanceof File)) throw new Error("Payment screenshot is required.");
+      screenshotData = validatePaymentScreenshot(
+        Buffer.from(await screenshot.arrayBuffer()),
+        screenshot.type
+      );
+    } catch (error) {
+      return NextResponse.json({ message: error instanceof Error ? error.message : "Invalid payment screenshot." }, { status: 400 });
     }
 
     // ── Find registration ───────────────────────────────
@@ -62,8 +77,10 @@ export async function POST(request: Request) {
 
     // ── Update registration ─────────────────────────────
     reg.utr = trimmedUtr;
-    reg.screenshot = screenshot;
-    reg.screenshotName = screenshotName ?? null;
+    const paymentScreenshotKey = await storePaymentScreenshot(screenshotData, screenshotName);
+    reg.screenshot = null;
+    reg.paymentScreenshotKey = paymentScreenshotKey;
+    reg.screenshotName = typeof screenshotName === "string" ? screenshotName : null;
     reg.paymentStatus = "SUBMITTED";
     reg.registrationStatus = "PENDING_VERIFICATION";
     reg.submittedAt = new Date();

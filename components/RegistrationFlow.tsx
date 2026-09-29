@@ -74,6 +74,7 @@ export default function RegistrationFlow() {
   const [pendingId, setPendingId] = useState("");
   const [utr, setUtr] = useState("");
   const [screenshot, setScreenshot] = useState<string | null>(null); // base64 data URL
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [screenshotName, setScreenshotName] = useState("");
   const [screenshotError, setScreenshotError] = useState("");
   const [submittedData, setSubmittedData] = useState<SubmittedData | null>(null);
@@ -138,19 +139,20 @@ export default function RegistrationFlow() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      setScreenshotError("Only image files are allowed (JPG, PNG, WEBP).");
+      setScreenshotError("Please upload a JPG, PNG, or WEBP image.");
       return;
     }
     if (file.size > MAX_SCREENSHOT_SIZE_MB * 1024 * 1024) {
-      setScreenshotError(`File is too large. Maximum size is ${MAX_SCREENSHOT_SIZE_MB}MB.`);
+      setScreenshotError("Screenshot must be smaller than 5 MB.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (ev) => {
       setScreenshot(ev.target?.result as string);
+      setScreenshotFile(file);
       setScreenshotName(file.name);
     };
     reader.readAsDataURL(file);
@@ -158,6 +160,7 @@ export default function RegistrationFlow() {
 
   function removeScreenshot() {
     setScreenshot(null);
+    setScreenshotFile(null);
     setScreenshotName("");
     setScreenshotError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -167,7 +170,7 @@ export default function RegistrationFlow() {
   async function handleSubmitUTR() {
     setErrorMsg("");
     const trimmed = utr.trim();
-    if (!screenshot) { setErrorMsg("Please upload your payment screenshot."); return; }
+    if (!screenshot || !screenshotFile) { setErrorMsg("Please upload your payment screenshot."); return; }
     if (!trimmed) { setErrorMsg("Please enter your UTR / Transaction ID."); return; }
     if (trimmed.length < 6) { setErrorMsg("UTR / Transaction ID seems too short. Please check and try again."); return; }
     if (trimmed.length > 50) { setErrorMsg("UTR / Transaction ID is too long. Please check and try again."); return; }
@@ -175,15 +178,15 @@ export default function RegistrationFlow() {
     setStep("processing");
 
     try {
+      const formData = new FormData();
+      formData.append("pendingId", pendingId);
+      formData.append("utr", trimmed);
+      formData.append("screenshot", screenshotFile);
+      formData.append("screenshotName", screenshotName);
+
       const res = await fetch("/api/payment/submit-utr", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pendingId,
-          utr: trimmed,
-          screenshot: screenshot ?? null,
-          screenshotName: screenshotName || null,
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -202,7 +205,6 @@ export default function RegistrationFlow() {
       setSubmittedData(submitted);
 
       // Save minimal info to localStorage for reference (no sensitive data)
-      // Note: screenshot stored as base64 — in production save to cloud storage instead
       window.localStorage.setItem("scorecraft-registration", JSON.stringify({
         pendingId,
         pendingReferenceId: data.pendingReferenceId,
@@ -253,6 +255,7 @@ export default function RegistrationFlow() {
     setPendingId("");
     setUtr("");
     setScreenshot(null);
+    setScreenshotFile(null);
     setScreenshotName("");
     setScreenshotError("");
     setSubmittedData(null);

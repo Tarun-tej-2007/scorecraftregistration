@@ -28,7 +28,8 @@ export interface IRegistration extends Document {
   amount: number;
   paymentMethod: string;
   utr: string | null;
-  screenshot: string | null;     // base64 — use cloud storage URL in production
+  screenshot: string | null;     // legacy base64 value for older records
+  paymentScreenshotKey: string | null;
   screenshotName: string | null;
 
   // Status
@@ -62,7 +63,8 @@ const RegistrationSchema = new Schema<IRegistration>(
     amount:        { type: Number, default: 250 },
     paymentMethod: { type: String, default: "UPI_QR" },
     utr:           { type: String, default: null },
-    screenshot:    { type: String, default: null },   // base64 string
+    screenshot:    { type: String, default: null },   // legacy base64 value
+    paymentScreenshotKey: { type: String, default: null, index: true },
     screenshotName:{ type: String, default: null },
 
     paymentStatus: {

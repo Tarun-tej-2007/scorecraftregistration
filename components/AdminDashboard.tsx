@@ -35,6 +35,7 @@ type Registration = {
   paymentMethod: string;
   utr: string | null;
   screenshot?: string | null;
+  paymentScreenshotKey?: string | null;
   screenshotName?: string | null;
   paymentStatus: PaymentStatus;
   registrationStatus: RegistrationStatus;
@@ -94,6 +95,7 @@ export default function AdminDashboard() {
   const [loading, setLoading]             = useState(false);
   const [actionMsg, setActionMsg]         = useState("");
   const [modal, setModal]                 = useState<ModalState>(null);
+  const [screenshotUrl, setScreenshotUrl] = useState("");
   const [rejectReason, setRejectReason]   = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -228,6 +230,25 @@ export default function AdminDashboard() {
   const isOk = (msg: string) => msg.startsWith("ok:");
   const msgText = (msg: string) => msg.replace(/^(ok|err):/, "");
 
+  async function viewScreenshot(reg: Registration) {
+    setActionMsg("");
+    try {
+      const response = await fetch(`/api/admin/registrations/${reg._id}/payment-screenshot`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!response.ok) {
+        setActionMsg("err:Screenshot is not available.");
+        return;
+      }
+      const blob = await response.blob();
+      if (screenshotUrl) URL.revokeObjectURL(screenshotUrl);
+      setScreenshotUrl(URL.createObjectURL(blob));
+      setModal({ type: "screenshot", reg });
+    } catch {
+      setActionMsg("err:Unable to load the payment screenshot.");
+    }
+  }
+
   // ══════════════════════════════════════════════════════
   // LOGIN SCREEN
   // ══════════════════════════════════════════════════════
@@ -282,11 +303,10 @@ export default function AdminDashboard() {
               <span>Amount</span>       <b>₹250/-</b>
               <span>UTR / Txn ID</span><b className="modal-utr">{modal.reg.utr ?? "—"}</b>
             </div>
-            {modal.reg.screenshot && (
+            {(modal.reg.paymentScreenshotKey || modal.reg.screenshot) && (
               <div className="admin-screenshot-wrap">
                 <p className="admin-screenshot-label">PAYMENT SCREENSHOT</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={modal.reg.screenshot} alt="Payment screenshot" className="admin-screenshot-img" />
+                <button className="secondary-button" onClick={() => viewScreenshot(modal.reg)}>VIEW SCREENSHOT</button>
               </div>
             )}
             <p className="modal-question">Have you verified this ₹250 payment in your UPI account?</p>
@@ -329,12 +349,12 @@ export default function AdminDashboard() {
       )}
 
       {/* Screenshot lightbox */}
-      {modal?.type === "screenshot" && modal.reg.screenshot && (
+      {modal?.type === "screenshot" && screenshotUrl && (
         <div className="admin-modal-overlay" onClick={() => setModal(null)}>
           <div className="screenshot-lightbox" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setModal(null)}><X size={20} /></button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={modal.reg.screenshot} alt="Payment screenshot" style={{ maxWidth: "100%", maxHeight: "80vh" }} />
+            <img src={screenshotUrl} alt="Payment screenshot" style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain" }} />
             <small>{modal.reg.screenshotName}</small>
           </div>
         </div>
@@ -399,13 +419,11 @@ export default function AdminDashboard() {
               <div className="vdt-row"><span>UTR / Txn ID</span><b className="utr-highlight">{reg.utr ?? "—"}</b></div>
               <div className="vdt-row"><span>Submitted</span><b>{reg.submittedAt ? new Date(reg.submittedAt).toLocaleString() : "—"}</b></div>
             </div>
-            {reg.screenshot ? (
+            {(reg.paymentScreenshotKey || reg.screenshot) ? (
               <div className="admin-screenshot-wrap">
                 <p className="admin-screenshot-label">PAYMENT SCREENSHOT</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={reg.screenshot} alt="Payment screenshot" className="admin-screenshot-img"
-                  onClick={() => setModal({ type: "screenshot", reg })} />
-                <small className="admin-screenshot-name">{reg.screenshotName} — click to expand</small>
+                <button className="secondary-button" onClick={() => viewScreenshot(reg)}>VIEW SCREENSHOT</button>
+                <small className="admin-screenshot-name">{reg.screenshotName ?? "Screenshot uploaded"}</small>
               </div>
             ) : (
               <p className="no-screenshot-note">No screenshot uploaded.</p>

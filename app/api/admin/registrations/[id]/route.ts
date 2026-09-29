@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 // ─────────────────────────────────────────────────────────
 // GET /api/admin/registrations/[id]
 //
-// Returns a single registration including screenshot.
+// Returns a single registration without screenshot data.
 // Protected by admin key.
 // ─────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export async function GET(
   try {
     await connectDB();
     const { id } = await params;
-    const reg = await Registration.findById(id).lean();
+    const reg = await Registration.findById(id).select("-screenshot").lean();
     if (!reg) return NextResponse.json({ message: "Not found." }, { status: 404 });
     return NextResponse.json({ success: true, registration: reg });
   } catch (err) {

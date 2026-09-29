@@ -1,0 +1,1 @@
+Put official KARE / SCORECRAFT logo assets in this folder if you want to replace the CSS-generated decorative marks. The supplied poster is intentionally not used as the website background so the website remains accessible and responsive.

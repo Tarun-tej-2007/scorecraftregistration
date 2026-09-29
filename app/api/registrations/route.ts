@@ -2,58 +2,38 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
 
-// ─────────────────────────────────────────────────────────
-// POST /api/registrations
-//
-// Creates a PENDING_PAYMENT registration in MongoDB.
-// Enforces the 200-seat hard cap.
-// Returns pendingReferenceId — NOT a confirmed ID.
-// ─────────────────────────────────────────────────────────
-
 const REGISTRATION_LIMIT = 200;
 const ALLOWED_YEARS = ["3rd Year", "4th Year"];
 
 export async function POST(request: Request) {
   try {
+    console.log("[/api/registrations] MONGODB_URI defined:", !!process.env.MONGODB_URI);
     await connectDB();
+    console.log("[/api/registrations] DB connected successfully.");
 
-    // ── Seat cap check (atomic count) ──────────────────
     const count = await Registration.countDocuments({
       registrationStatus: { $ne: "REJECTED" },
     });
 
     if (count >= REGISTRATION_LIMIT) {
       return NextResponse.json(
-        {
-          message: `Registrations are closed. All ${REGISTRATION_LIMIT} seats have been filled. Thank you for your interest!`,
-          code: "SEATS_FULL",
-          availableSeats: 0,
-        },
+        { message: `Registrations are closed. All ${REGISTRATION_LIMIT} seats have been filled.`, code: "SEATS_FULL", availableSeats: 0 },
         { status: 409 }
       );
     }
 
     const body = await request.json();
 
-    // ── Required field validation ───────────────────────
     const required = ["name", "registerNo", "email", "phone", "department", "year"];
     const missing = required.filter((k) => !body?.[k]?.toString().trim());
     if (missing.length) {
-      return NextResponse.json(
-        { message: `Missing required fields: ${missing.join(", ")}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: `Missing required fields: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    // ── Year validation ─────────────────────────────────
     if (!ALLOWED_YEARS.includes(body.year)) {
-      return NextResponse.json(
-        { message: "Only 3rd and 4th year students are eligible for this event." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Only 3rd and 4th year students are eligible." }, { status: 400 });
     }
 
-    // ── Duplicate check (same registerNo) ──────────────
     const existing = await Registration.findOne({
       registerNo: body.registerNo.trim().toUpperCase(),
       registrationStatus: { $nin: ["REJECTED"] },
@@ -65,11 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Create registration ─────────────────────────────
-    const pendingReferenceId = `SC-PENDING-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 5)
-      .toUpperCase()}`;
+    const pendingReferenceId = `SC-PENDING-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
 
     const registration = await Registration.create({
       pendingReferenceId,
@@ -85,14 +61,21 @@ export async function POST(request: Request) {
       registrationStatus: "PENDING_PAYMENT",
     });
 
+    console.log("[/api/registrations] Created registration:", registration._id.toString());
+
     return NextResponse.json({
       success: true,
       pendingId: registration._id.toString(),
       pendingReferenceId: registration.pendingReferenceId,
       availableSeats: REGISTRATION_LIMIT - count - 1,
     });
+
   } catch (err: unknown) {
-    console.error("[POST /api/registrations]", err);
-    return NextResponse.json({ message: "Server error. Please try again." }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    const stack   = err instanceof Error ? err.stack   : "";
+    console.error("[POST /api/registrations] ERROR:", message);
+    console.error("[POST /api/registrations] STACK:", stack);
+    // Return detail temporarily so you can see it in the browser network tab
+    return NextResponse.json({ message: "Server error.", detail: message }, { status: 500 });
   }
 }

@@ -177,7 +177,12 @@ export default function RegistrationFlow() {
       const res = await fetch("/api/payment/submit-utr", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pendingId, utr: trimmed }),
+        body: JSON.stringify({
+          pendingId,
+          utr: trimmed,
+          screenshot: screenshot ?? null,
+          screenshotName: screenshotName || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -195,24 +200,12 @@ export default function RegistrationFlow() {
       };
       setSubmittedData(submitted);
 
-      // Save to localStorage for admin dashboard
+      // Save minimal info to localStorage for reference (no sensitive data)
       // Note: screenshot stored as base64 — in production save to cloud storage instead
       window.localStorage.setItem("scorecraft-registration", JSON.stringify({
+        pendingId,
         pendingReferenceId: data.pendingReferenceId,
-        registrationId: null,
         name: form.name.trim(),
-        registerNo: form.registerNo.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        department: form.department,
-        year: form.year,
-        amount: 250,
-        paymentMethod: "UPI_QR",
-        utr: trimmed,
-        screenshot: screenshot ?? null,
-        screenshotName: screenshotName || null,
-        paymentStatus: "SUBMITTED",
-        registrationStatus: "PENDING_VERIFICATION",
         submittedAt: new Date().toISOString(),
       }));
 
@@ -223,12 +216,17 @@ export default function RegistrationFlow() {
     }
   }
 
-  // ── Check if admin has verified/rejected (reads localStorage) ──
-  function checkAdminStatus() {
+  // ── Check if admin has verified/rejected ──
+  // Calls the real MongoDB status endpoint.
+  async function checkAdminStatus() {
+    setErrorMsg("");
     try {
-      const raw = window.localStorage.getItem("scorecraft-registration");
-      if (!raw) return;
-      const data = JSON.parse(raw);
+      const res = await fetch(`/api/registrations/${pendingId}/status`);
+      if (!res.ok) {
+        setErrorMsg("Could not fetch status. Please try again.");
+        return;
+      }
+      const data = await res.json();
       if (data.registrationStatus === "CONFIRMED" || data.registrationStatus === "REJECTED") {
         setAdminStatus({
           registrationStatus: data.registrationStatus,
@@ -242,7 +240,7 @@ export default function RegistrationFlow() {
         setErrorMsg("Payment is still pending verification by the event organisers.");
       }
     } catch {
-      setErrorMsg("Could not read status. Please try again.");
+      setErrorMsg("Network error. Please check your connection and try again.");
     }
   }
 

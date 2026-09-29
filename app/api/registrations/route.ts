@@ -1,32 +1,31 @@
 import { NextResponse } from "next/server";
-import {
-  setRegistration,
-  isRegistrationOpen,
-  getAvailableSeats,
-  REGISTRATION_LIMIT,
-  type PendingRegistration,
-} from "@/lib/registrationStore";
+import { connectDB } from "@/lib/mongodb";
+import { Registration } from "@/lib/models/Registration";
 
 // ─────────────────────────────────────────────────────────
 // POST /api/registrations
 //
-// Creates a PENDING_PAYMENT registration.
-// Returns pendingId — NOT a confirmed registration ID.
-//
-// Hard limit: REGISTRATION_LIMIT seats.
-// Registrations are rejected once the limit is reached.
+// Creates a PENDING_PAYMENT registration in MongoDB.
+// Enforces the 200-seat hard cap.
+// Returns pendingReferenceId — NOT a confirmed ID.
 // ─────────────────────────────────────────────────────────
 
-// Valid year values — must match the frontend dropdown
+const REGISTRATION_LIMIT = 200;
 const ALLOWED_YEARS = ["3rd Year", "4th Year"];
 
 export async function POST(request: Request) {
   try {
-    // ── Seat cap check ──────────────────────────────────
-    if (!isRegistrationOpen()) {
+    await connectDB();
+
+    // ── Seat cap check (atomic count) ──────────────────
+    const count = await Registration.countDocuments({
+      registrationStatus: { $ne: "REJECTED" },
+    });
+
+    if (count >= REGISTRATION_LIMIT) {
       return NextResponse.json(
         {
-          message: `Registrations are now closed. All ${REGISTRATION_LIMIT} seats have been filled. Thank you for your interest!`,
+          message: `Registrations are closed. All ${REGISTRATION_LIMIT} seats have been filled. Thank you for your interest!`,
           code: "SEATS_FULL",
           availableSeats: 0,
         },
@@ -38,8 +37,7 @@ export async function POST(request: Request) {
 
     // ── Required field validation ───────────────────────
     const required = ["name", "registerNo", "email", "phone", "department", "year"];
-    const missing = required.filter((key) => !body?.[key]?.toString().trim());
-
+    const missing = required.filter((k) => !body?.[k]?.toString().trim());
     if (missing.length) {
       return NextResponse.json(
         { message: `Missing required fields: ${missing.join(", ")}` },
@@ -55,37 +53,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Create pending registration ─────────────────────
-    const pendingId = `PENDING-${Date.now()}-${Math.random()
+    // ── Duplicate check (same registerNo) ──────────────
+    const existing = await Registration.findOne({
+      registerNo: body.registerNo.trim().toUpperCase(),
+      registrationStatus: { $nin: ["REJECTED"] },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { message: "A registration already exists for this Register Number.", code: "DUPLICATE" },
+        { status: 409 }
+      );
+    }
+
+    // ── Create registration ─────────────────────────────
+    const pendingReferenceId = `SC-PENDING-${Date.now()}-${Math.random()
       .toString(36)
-      .slice(2, 7)
+      .slice(2, 5)
       .toUpperCase()}`;
 
-    const registration: PendingRegistration = {
+    const registration = await Registration.create({
+      pendingReferenceId,
       name: body.name.trim(),
-      registerNo: body.registerNo.trim(),
-      email: body.email.trim(),
+      registerNo: body.registerNo.trim().toUpperCase(),
+      email: body.email.trim().toLowerCase(),
       phone: body.phone.trim(),
       department: body.department,
       year: body.year,
-      status: "PENDING_PAYMENT",
       amount: 250,
-      registrationId: null,
-      paymentId: null,
-      razorpayOrderId: null,
-      createdAt: Date.now(),
-    };
-
-    setRegistration(pendingId, registration);
+      paymentMethod: "UPI_QR",
+      paymentStatus: "PENDING",
+      registrationStatus: "PENDING_PAYMENT",
+    });
 
     return NextResponse.json({
       success: true,
-      pendingId,
-      status: "PENDING_PAYMENT",
-      availableSeats: getAvailableSeats(),
-      message: "Registration created. Please complete payment to confirm your seat.",
+      pendingId: registration._id.toString(),
+      pendingReferenceId: registration.pendingReferenceId,
+      availableSeats: REGISTRATION_LIMIT - count - 1,
     });
-  } catch {
-    return NextResponse.json({ message: "Invalid request body." }, { status: 400 });
+  } catch (err: unknown) {
+    console.error("[POST /api/registrations]", err);
+    return NextResponse.json({ message: "Server error. Please try again." }, { status: 500 });
   }
 }

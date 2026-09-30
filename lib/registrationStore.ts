@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────
 // Registration cap
 // ─────────────────────────────────────────────────────────
-export const REGISTRATION_LIMIT = 200;
+export const REGISTRATION_LIMIT = 180;
 
 export type PendingRegistration = {
   name: string;

@@ -233,7 +233,7 @@ export default function RegistrationFlow() {
       const regData = await regRes.json();
       if (!regRes.ok) {
         if (regRes.status === 409 && regData.code === "SEATS_FULL") {
-          setErrorMsg("⚠ Registrations are now closed — all 200 seats have been filled. Thank you for your interest!");
+          setErrorMsg("⚠ Registrations are now closed — all 180 seats have been filled. Thank you for your interest!");
         } else if (regRes.status === 409 && regData.code === "DUPLICATE") {
           // Their registration already exists — try to resume it
           if (regData.existingId) {

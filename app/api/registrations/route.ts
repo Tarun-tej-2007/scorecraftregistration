@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
 
-const REGISTRATION_LIMIT = 200;
+const REGISTRATION_LIMIT = 180;
 const ALLOWED_YEARS = ["3rd Year", "4th Year"];
 
 export async function POST(request: Request) {

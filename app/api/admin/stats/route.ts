@@ -9,7 +9,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 // Returns seat and payment statistics. Protected by admin key.
 // ─────────────────────────────────────────────────────────
 
-const REGISTRATION_LIMIT = 200;
+const REGISTRATION_LIMIT = 180;
 
 export async function GET(request: Request) {
   const authError = requireAdmin(request);

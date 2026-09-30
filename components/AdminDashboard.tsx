@@ -353,8 +353,8 @@ export default function AdminDashboard() {
   const msgText  = (msg: string) => msg.replace(/^(ok|err):/, "");
 
   const filtered = registrations.filter((r) =>
-    [r.name, r.registerNo, r.email, r.utr ?? "", r.pendingReferenceId, r.registrationId ?? ""].some(
-      (v) => v.toLowerCase().includes(query.toLowerCase())
+    [r.name, r.registerNo, r.email, r.phone, r.utr ?? "", r.pendingReferenceId, r.registrationId ?? ""].some(
+      (v) => v?.toLowerCase().includes(query.toLowerCase())
     )
   );
 
@@ -706,6 +706,7 @@ export default function AdminDashboard() {
                     <th>Ref / ID</th>
                     <th>Name</th>
                     <th>Reg. No.</th>
+                    <th>Phone</th>
                     <th>Dept.</th>
                     <th>Year</th>
                     <th>UTR</th>
@@ -733,6 +734,9 @@ export default function AdminDashboard() {
 
                       {/* Reg No */}
                       <td>{reg.registerNo}</td>
+
+                      {/* Phone */}
+                      <td>{reg.phone || "—"}</td>
 
                       {/* Dept */}
                       <td>{reg.department}</td>

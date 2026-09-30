@@ -1,40 +1,75 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
-import { storePaymentScreenshot, validatePaymentScreenshot } from "@/lib/paymentScreenshot";
 
 // ─────────────────────────────────────────────────────────
 // POST /api/payment/submit-utr
 //
-// Records UTR + payment screenshot in MongoDB.
+// Accepts multipart/form-data (because the frontend sends
+// the screenshot as a real File object via FormData).
+//
+// Fields:
+//   pendingId      — MongoDB _id of the registration
+//   utr            — UTR / Transaction ID string
+//   screenshot     — image File (optional but encouraged)
+//   screenshotName — original filename
+//
+// Converts the File to a base64 data URL and stores in MongoDB.
 // Changes status: PENDING_PAYMENT → PENDING_VERIFICATION
-// Does NOT confirm the registration.
-// Admin must verify independently.
 // ─────────────────────────────────────────────────────────
 
 const UTR_MIN = 6;
 const UTR_MAX = 50;
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(request: Request) {
   try {
     await connectDB();
 
-    if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) {
-      return NextResponse.json({ message: "Payment screenshot is required." }, { status: 400 });
+    const contentType = request.headers.get("content-type") ?? "";
+
+    let pendingId = "";
+    let utr       = "";
+    let screenshotBase64: string | null = null;
+    let screenshotName: string | null   = null;
+
+    // ── Parse FormData or JSON ──────────────────────────
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+
+      pendingId     = (formData.get("pendingId") as string | null)     ?? "";
+      utr           = (formData.get("utr")        as string | null)     ?? "";
+      screenshotName = (formData.get("screenshotName") as string | null) ?? null;
+
+      const file = formData.get("screenshot") as File | null;
+      if (file && file.size > 0) {
+        if (file.size > MAX_FILE_BYTES) {
+          return NextResponse.json(
+            { message: "Screenshot must be smaller than 5 MB." },
+            { status: 400 }
+          );
+        }
+        // Convert File → ArrayBuffer → base64 data URL
+        const buffer = await file.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+        screenshotBase64 = `data:${file.type || "image/jpeg"};base64,${base64}`;
+        screenshotName    = screenshotName || file.name || "screenshot";
+      }
+    } else {
+      // Fallback: legacy JSON body (screenshot already base64)
+      const body = await request.json();
+      pendingId      = body.pendingId      ?? "";
+      utr            = body.utr            ?? "";
+      screenshotBase64 = body.screenshot   ?? null;
+      screenshotName   = body.screenshotName ?? null;
     }
 
-    const formData = await request.formData();
-    const pendingId = formData.get("pendingId");
-    const utr = formData.get("utr");
-    const screenshot = formData.get("screenshot");
-    const screenshotName = formData.get("screenshotName");
-
-    if (typeof pendingId !== "string" || !pendingId) {
+    // ── Validation ───────────────────────────────────────
+    if (!pendingId) {
       return NextResponse.json({ message: "Missing registration reference." }, { status: 400 });
     }
 
-    // ── UTR validation ──────────────────────────────────
-    const trimmedUtr = (typeof utr === "string" ? utr : "").trim();
+    const trimmedUtr = utr.toString().trim();
     if (!trimmedUtr) {
       return NextResponse.json({ message: "UTR / Transaction ID is required." }, { status: 400 });
     }
@@ -48,23 +83,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid characters in UTR." }, { status: 400 });
     }
 
-    let screenshotData;
-    try {
-      if (!(screenshot instanceof File)) throw new Error("Payment screenshot is required.");
-      screenshotData = validatePaymentScreenshot(
-        Buffer.from(await screenshot.arrayBuffer()),
-        screenshot.type
-      );
-    } catch (error) {
-      return NextResponse.json({ message: error instanceof Error ? error.message : "Invalid payment screenshot." }, { status: 400 });
-    }
-
-    // ── Find registration ───────────────────────────────
+    // ── Find registration ────────────────────────────────
     const reg = await Registration.findById(pendingId);
     if (!reg) {
       return NextResponse.json({ message: "Registration not found." }, { status: 404 });
     }
-
     if (reg.registrationStatus === "CONFIRMED") {
       return NextResponse.json({ message: "This registration is already confirmed." }, { status: 409 });
     }
@@ -75,28 +98,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Update registration ─────────────────────────────
-    reg.utr = trimmedUtr;
-    const paymentScreenshotKey = await storePaymentScreenshot(screenshotData, screenshotName);
-    reg.screenshot = null;
-    reg.paymentScreenshotKey = paymentScreenshotKey;
-    reg.screenshotName = typeof screenshotName === "string" ? screenshotName : null;
-    reg.paymentStatus = "SUBMITTED";
-    reg.registrationStatus = "PENDING_VERIFICATION";
-    reg.submittedAt = new Date();
+    // ── Persist ──────────────────────────────────────────
+    reg.utr                  = trimmedUtr;
+    reg.screenshot           = screenshotBase64;
+    reg.screenshotName       = screenshotName;
+    reg.paymentStatus        = "SUBMITTED";
+    reg.registrationStatus   = "PENDING_VERIFICATION";
+    reg.submittedAt          = new Date();
     await reg.save();
 
+    console.log(`[submit-utr] Saved UTR for ${reg.name} — screenshot: ${!!screenshotBase64}`);
+
     return NextResponse.json({
-      success: true,
+      success:            true,
       pendingReferenceId: reg.pendingReferenceId,
-      utr: trimmedUtr,
-      paymentStatus: "SUBMITTED",
+      utr:                trimmedUtr,
+      paymentStatus:      "SUBMITTED",
       registrationStatus: "PENDING_VERIFICATION",
-      amount: reg.amount,
-      message: "Payment details submitted. Pending verification by organisers.",
+      amount:             reg.amount,
+      screenshotSaved:    !!screenshotBase64,
+      message:            "Payment details submitted. Pending verification by organisers.",
     });
   } catch (err: unknown) {
-    console.error("[POST /api/payment/submit-utr]", err);
-    return NextResponse.json({ message: "Server error. Please try again." }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[POST /api/payment/submit-utr] ERROR:", msg);
+    return NextResponse.json({ message: "Server error. Please try again.", detail: msg }, { status: 500 });
   }
 }

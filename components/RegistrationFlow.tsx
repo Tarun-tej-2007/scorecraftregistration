@@ -29,7 +29,7 @@ type FormData = {
 };
 
 // "confirmed" is only reached via admin action (checked via localStorage)
-type Step = "form" | "review" | "payment" | "processing" | "submitted" | "failed";
+type Step = "form" | "review" | "payment" | "processing" | "whatsapp" | "submitted" | "failed";
 
 type SubmittedData = {
   pendingReferenceId: string;
@@ -212,7 +212,7 @@ export default function RegistrationFlow() {
         submittedAt: new Date().toISOString(),
       }));
 
-      setStep("submitted");
+      setStep("whatsapp"); // Show WhatsApp join step before the status screen
     } catch {
       setErrorMsg("Network error while submitting. Please try again.");
       setStep("payment");
@@ -265,14 +265,17 @@ export default function RegistrationFlow() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  const isSubmitted = step === "submitted";
+  const isSubmitted   = step === "submitted";
+  const isWhatsapp    = step === "whatsapp";
+  const pastPayment   = (["whatsapp", "submitted"] as string[]).includes(step);
 
-  // Progress step states for the 4-step bar
+  // Progress step states for the 5-step bar
   const progStates = {
-    details: { active: step === "form",    done: step !== "form" },
-    review:  { active: step === "review",  done: (["payment","processing","submitted","failed"] as string[]).includes(step) },
-    payment: { active: (["payment","processing"] as string[]).includes(step), done: isSubmitted },
-    confirm: { active: false, done: false, waiting: isSubmitted },
+    details:   { active: step === "form",                    done: step !== "form" },
+    review:    { active: step === "review",                  done: (["payment","processing","whatsapp","submitted"] as string[]).includes(step) },
+    payment:   { active: (["payment","processing"] as string[]).includes(step), done: pastPayment },
+    joinGroup: { active: isWhatsapp,                         done: isSubmitted },
+    confirm:   { active: false,                              done: false, waiting: isSubmitted },
   };
 
   return (
@@ -280,13 +283,15 @@ export default function RegistrationFlow() {
 
       {/* ── Progress bar ── */}
       <div className="reg-progress" role="progressbar" aria-label="Registration steps">
-        <ProgStep num={1} label="DETAILS"  active={progStates.details.active} done={progStates.details.done} />
+        <ProgStep num={1} label="DETAILS"    active={progStates.details.active}   done={progStates.details.done} />
         <div className="prog-line" />
-        <ProgStep num={2} label="REVIEW"   active={progStates.review.active}  done={progStates.review.done} />
+        <ProgStep num={2} label="REVIEW"     active={progStates.review.active}    done={progStates.review.done} />
         <div className="prog-line" />
-        <ProgStep num={3} label="PAYMENT"  active={progStates.payment.active} done={progStates.payment.done} />
+        <ProgStep num={3} label="PAYMENT"    active={progStates.payment.active}   done={progStates.payment.done} />
         <div className="prog-line" />
-        <ProgStep num={4} label="CONFIRM"  active={false} done={false} waiting={progStates.confirm.waiting} />
+        <ProgStep num={4} label="JOIN GROUP" active={progStates.joinGroup.active} done={progStates.joinGroup.done} />
+        <div className="prog-line" />
+        <ProgStep num={5} label="CONFIRM"    active={false} done={false} waiting={progStates.confirm.waiting} />
       </div>
 
       {/* ════════════════════════════════════════
@@ -654,6 +659,82 @@ export default function RegistrationFlow() {
             </button>
             <button className="secondary-button" onClick={reset} id="btn-register-another">
               Register Another Participant
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════
+          STEP 4 — JOIN WHATSAPP GROUP
+      ════════════════════════════════════════ */}
+      {step === "whatsapp" && (
+        <div className="step-section whatsapp-step">
+          <div className="step-header">
+            <span className="brush-label">STEP 4 OF 4</span>
+            <h3 className="step-heading-text">Join the Community</h3>
+            <p className="step-subtext">
+              Stay updated with workshop announcements, schedule changes,
+              and important information.
+            </p>
+          </div>
+
+          {/* WhatsApp QR card */}
+          <div className="wa-qr-card">
+            <div className="wa-qr-header">
+              <svg className="wa-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              OFFICIAL WHATSAPP GROUP
+            </div>
+
+            {/* The real QR code asset */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/assets/scorecraft-whatsapp-qr.png"
+              alt="Official SCORECRAFT workshop WhatsApp group QR code"
+              className="wa-qr-img"
+            />
+
+            <div className="wa-scan-label">SCAN TO JOIN</div>
+
+            <div className="wa-event-label">
+              <b>PRODUCT DESIGN AND MARKET DRIVEN INNOVATION</b>
+              <small>SCORECRAFT</small>
+            </div>
+
+            {/* Join button — opens invite link in new tab */}
+            {process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL && (
+              <a
+                href={process.env.NEXT_PUBLIC_WHATSAPP_GROUP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="primary-button wa-join-btn"
+                aria-label="Join WhatsApp Group"
+                id="btn-join-whatsapp"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width={16} height={16} aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                JOIN WHATSAPP GROUP →
+              </a>
+            )}
+          </div>
+
+          {/* Status note */}
+          <div className="wa-status-note">
+            Your payment details have been submitted and are&nbsp;
+            <strong>pending verification</strong> by the event organisers.
+          </div>
+
+          {/* Continue button */}
+          <div className="wa-continue-row">
+            <button
+              className="primary-button"
+              onClick={() => setStep("submitted")}
+              id="btn-wa-continue"
+              aria-label="Continue to registration status"
+            >
+              CONTINUE TO REGISTRATION STATUS <ArrowRight size={16} />
             </button>
           </div>
         </div>

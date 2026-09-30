@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,7 +29,7 @@ type FormData = {
 };
 
 // "confirmed" is only reached via admin action (checked via localStorage)
-type Step = "form" | "review" | "payment" | "processing" | "whatsapp" | "submitted" | "failed";
+type Step = "form" | "review" | "payment" | "processing" | "whatsapp" | "submitted" | "failed" | "resuming";
 
 type SubmittedData = {
   pendingReferenceId: string;
@@ -65,8 +65,22 @@ const initialForm: FormData = {
 
 const MAX_SCREENSHOT_SIZE_MB = 5;
 
+// ── LocalStorage keys ──────────────────────────────────
+const LS_PENDING_ID   = "scorecraft-pending-id";   // MongoDB _id
+const LS_PENDING_FORM = "scorecraft-pending-form"; // form data for resume display
+
+function lsSave(key: string, val: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* quota / SSR */ }
+}
+function lsGet<T>(key: string): T | null {
+  try { const v = localStorage.getItem(key); return v ? (JSON.parse(v) as T) : null; } catch { return null; }
+}
+function lsClear(...keys: string[]) {
+  try { keys.forEach((k) => localStorage.removeItem(k)); } catch { /* SSR */ }
+}
+
 export default function RegistrationFlow() {
-  const [step, setStep] = useState<Step>("form");
+  const [step, setStep] = useState<Step>("resuming"); // start in resuming while we check localStorage
   const [form, setForm] = useState<FormData>(initialForm);
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -85,6 +99,104 @@ export default function RegistrationFlow() {
   const update = (key: keyof FormData, value: string) =>
     setForm((c) => ({ ...c, [key]: value }));
 
+  // ── On mount: attempt to resume a pending registration ──────
+  // This is the core persistence fix. React state is volatile
+  // (lost on refresh). localStorage survives refreshes. We use
+  // the stored pendingId to call the server and restore state.
+  useEffect(() => {
+    async function tryResume() {
+      const savedId = lsGet<string>(LS_PENDING_ID);
+
+      if (!savedId) {
+        // No pending registration — start fresh
+        setStep("form");
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/registrations/${savedId}/status`);
+
+        if (!res.ok) {
+          // Registration not found or error — clear stale localStorage and start fresh
+          lsClear(LS_PENDING_ID, LS_PENDING_FORM);
+          setStep("form");
+          return;
+        }
+
+        const data = await res.json();
+
+        // Restore form data from server (authoritative) so UI can display participant info
+        const restoredForm: FormData = {
+          name:       data.name       || "",
+          registerNo: data.registerNo || "",
+          email:      data.email      || "",
+          phone:      data.phone      || "",
+          department: data.department || "",
+          year:       data.year       || "",
+        };
+        setForm(restoredForm);
+        setPendingId(savedId);
+
+        // Determine correct step from server-side state
+        const rStatus = data.registrationStatus as string;
+        const pStatus = data.paymentStatus      as string;
+
+        if (rStatus === "CONFIRMED") {
+          // Admin already confirmed — jump straight to confirmed screen
+          setSubmittedData({
+            pendingReferenceId: data.pendingReferenceId,
+            utr: data.utr ?? "",
+            paymentStatus: pStatus,
+            registrationStatus: rStatus,
+            amount: data.amount ?? 250,
+          });
+          setAdminStatus({
+            registrationStatus: "CONFIRMED",
+            registrationId: data.registrationId,
+            verifiedAt: data.verifiedAt,
+          });
+          lsClear(LS_PENDING_ID, LS_PENDING_FORM); // clean up — done!
+          setStep("submitted");
+        } else if (rStatus === "REJECTED") {
+          setSubmittedData({
+            pendingReferenceId: data.pendingReferenceId,
+            utr: data.utr ?? "",
+            paymentStatus: pStatus,
+            registrationStatus: rStatus,
+            amount: data.amount ?? 250,
+          });
+          setAdminStatus({
+            registrationStatus: "REJECTED",
+            rejectedAt: data.rejectedAt,
+            rejectionReason: data.rejectionReason,
+          });
+          lsClear(LS_PENDING_ID, LS_PENDING_FORM); // clean up — rejected means closed
+          setStep("submitted");
+        } else if (rStatus === "PENDING_VERIFICATION" || pStatus === "SUBMITTED") {
+          // UTR + screenshot already submitted — show pending/whatsapp step
+          setSubmittedData({
+            pendingReferenceId: data.pendingReferenceId,
+            utr: data.utr ?? "",
+            paymentStatus: pStatus,
+            registrationStatus: rStatus,
+            amount: data.amount ?? 250,
+          });
+          setStep("whatsapp");
+        } else {
+          // PENDING_PAYMENT — user paid or is about to pay, needs UTR entry
+          // Resume at the payment step, keep the same registration
+          setStep("payment");
+        }
+      } catch {
+        // Network error — safe fallback: clear and start fresh
+        lsClear(LS_PENDING_ID, LS_PENDING_FORM);
+        setStep("form");
+      }
+    }
+
+    tryResume();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Step 1 → 2: Validate form, go to review ──
   function handleProceedToReview() {
     setErrorMsg("");
@@ -99,6 +211,9 @@ export default function RegistrationFlow() {
   }
 
   // ── Step 2 → 3: Create pending registration, go to payment ──
+  // IMPORTANT: Registration is created HERE — before payment.
+  // The pendingId is immediately persisted to localStorage so that
+  // a browser refresh during/after payment can resume the same registration.
   async function handleProceedToPayment() {
     setIsLoading(true);
     setErrorMsg("");
@@ -119,11 +234,26 @@ export default function RegistrationFlow() {
       if (!regRes.ok) {
         if (regRes.status === 409 && regData.code === "SEATS_FULL") {
           setErrorMsg("⚠ Registrations are now closed — all 200 seats have been filled. Thank you for your interest!");
+        } else if (regRes.status === 409 && regData.code === "DUPLICATE") {
+          // Their registration already exists — try to resume it
+          if (regData.existingId) {
+            lsSave(LS_PENDING_ID, regData.existingId);
+            lsSave(LS_PENDING_FORM, form);
+            setPendingId(regData.existingId);
+            setStep("payment");
+            return;
+          }
+          setErrorMsg(regData.message || "A registration already exists for this Register Number.");
         } else {
           setErrorMsg(regData.message || "Failed to create registration. Please try again.");
         }
         return;
       }
+
+      // ✅ Persist immediately — survives page refresh
+      lsSave(LS_PENDING_ID, regData.pendingId);
+      lsSave(LS_PENDING_FORM, form);
+
       setPendingId(regData.pendingId);
       setStep("payment");
     } catch {
@@ -204,13 +334,9 @@ export default function RegistrationFlow() {
       };
       setSubmittedData(submitted);
 
-      // Save minimal info to localStorage for reference (no sensitive data)
-      window.localStorage.setItem("scorecraft-registration", JSON.stringify({
-        pendingId,
-        pendingReferenceId: data.pendingReferenceId,
-        name: form.name.trim(),
-        submittedAt: new Date().toISOString(),
-      }));
+      // localStorage already has the pendingId from when registration was created.
+      // We keep it until confirmed/rejected so the WhatsApp/pending screen is
+      // also resumable. No need to re-save sensitive data.
 
       setStep("whatsapp"); // Show WhatsApp join step before the status screen
     } catch {
@@ -247,8 +373,9 @@ export default function RegistrationFlow() {
     }
   }
 
-  // ── Reset ──
+  // ── Reset — also clears localStorage so next participant starts fresh ──
   function reset() {
+    lsClear(LS_PENDING_ID, LS_PENDING_FORM);
     setStep("form");
     setForm(initialForm);
     setErrorMsg("");
@@ -270,8 +397,9 @@ export default function RegistrationFlow() {
   const pastPayment   = (["whatsapp", "submitted"] as string[]).includes(step);
 
   // Progress step states for the 5-step bar
+  // ("resuming" step shows no active indicator while loading)
   const progStates = {
-    details:   { active: step === "form",                    done: step !== "form" },
+    details:   { active: step === "form",                    done: !(["form","resuming"] as string[]).includes(step) },
     review:    { active: step === "review",                  done: (["payment","processing","whatsapp","submitted"] as string[]).includes(step) },
     payment:   { active: (["payment","processing"] as string[]).includes(step), done: pastPayment },
     joinGroup: { active: isWhatsapp,                         done: isSubmitted },
@@ -293,6 +421,18 @@ export default function RegistrationFlow() {
         <div className="prog-line" />
         <ProgStep num={5} label="CONFIRM"    active={false} done={false} waiting={progStates.confirm.waiting} />
       </div>
+
+      {/* ════════════════════════════════════════
+          RESUMING — shown while checking localStorage + server
+          (replaces the "flash of empty form" on page load)
+      ════════════════════════════════════════ */}
+      {step === "resuming" && (
+        <div className="resuming-wrap">
+          <Loader2 size={36} className="spin-icon resuming-spinner" />
+          <p className="resuming-text">RESUMING YOUR REGISTRATION…</p>
+          <small className="resuming-sub">Checking for an existing session</small>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════
           STEP 1 — FORM

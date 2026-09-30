@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     });
     if (existing) {
       return NextResponse.json(
-        { message: "A registration already exists for this Register Number.", code: "DUPLICATE" },
+        { message: "A registration already exists for this Register Number.", code: "DUPLICATE", existingId: existing._id.toString() },
         { status: 409 }
       );
     }

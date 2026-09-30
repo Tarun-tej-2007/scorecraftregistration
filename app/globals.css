@@ -1602,3 +1602,14 @@ img { max-width: 100%; height: auto; }
 @media (max-width: 520px) {
   .prog-label { font-size: 8px; letter-spacing: .02em; }
 }
+
+/* ---- RESUMING STEP ---- */
+.resuming-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; text-align: center; gap: 12px;
+}
+.resuming-spinner { color: var(--navy); margin-bottom: 8px; }
+.resuming-text { font: 700 16px "Oswald"; letter-spacing: .1em; color: var(--navy); }
+.resuming-sub { font-size: 13px; color: var(--muted); }
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }

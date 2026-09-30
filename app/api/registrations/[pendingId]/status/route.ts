@@ -5,9 +5,11 @@ import { Registration } from "@/lib/models/Registration";
 // ─────────────────────────────────────────────────────────
 // GET /api/registrations/[pendingId]/status
 //
-// Returns current payment + registration status for the
-// participant to check after submitting UTR.
-// Uses MongoDB _id as pendingId.
+// Public endpoint — returns enough info for a participant to
+// resume their own pending registration after a page refresh.
+//
+// Returns: all status fields + safe participant details.
+// Does NOT return screenshot (large base64) or admin data.
 // ─────────────────────────────────────────────────────────
 
 export async function GET(
@@ -19,9 +21,16 @@ export async function GET(
 
     const { pendingId } = await params;
 
+    if (!pendingId || pendingId.length < 10) {
+      return NextResponse.json({ message: "Invalid registration ID." }, { status: 400 });
+    }
+
     const reg = await Registration.findById(pendingId).select(
-      "pendingReferenceId registrationId paymentStatus registrationStatus " +
-      "verifiedAt rejectedAt rejectionReason name amount"
+      "pendingReferenceId registrationId " +
+      "paymentStatus registrationStatus " +
+      "verifiedAt rejectedAt rejectionReason " +
+      "name registerNo email phone department year " +
+      "amount utr screenshotName"
     );
 
     if (!reg) {
@@ -29,15 +38,28 @@ export async function GET(
     }
 
     return NextResponse.json({
-      pendingReferenceId: reg.pendingReferenceId,
-      registrationId: reg.registrationId,
-      paymentStatus: reg.paymentStatus,
-      registrationStatus: reg.registrationStatus,
-      verifiedAt: reg.verifiedAt,
-      rejectedAt: reg.rejectedAt,
-      rejectionReason: reg.rejectionReason,
-      name: reg.name,
-      amount: reg.amount,
+      // ── Identifiers ──
+      pendingId:            (reg as unknown as { _id: { toString(): string } })._id.toString(),
+      pendingReferenceId:   reg.pendingReferenceId,
+      registrationId:       reg.registrationId,
+      // ── Status (server is the authoritative source) ──
+      paymentStatus:        reg.paymentStatus,
+      registrationStatus:   reg.registrationStatus,
+      // ── Admin verification dates ──
+      verifiedAt:           reg.verifiedAt,
+      rejectedAt:           reg.rejectedAt,
+      rejectionReason:      reg.rejectionReason,
+      // ── Participant info (needed to restore UI without re-filling the form) ──
+      name:                 reg.name,
+      registerNo:           reg.registerNo,
+      email:                reg.email,
+      phone:                reg.phone,
+      department:           reg.department,
+      year:                 reg.year,
+      amount:               reg.amount,
+      // ── Payment details (for submitted-state display) ──
+      utr:                  reg.utr ?? null,
+      screenshotUploaded:   !!reg.screenshotName,
     });
   } catch (err: unknown) {
     console.error("[GET /api/registrations/[pendingId]/status]", err);

@@ -1436,3 +1436,102 @@ img { max-width: 100%; height: auto; }
   .prog-label { font-size: 7px; }
   .registration-card { padding-inline: 13px; }
 }
+
+/* ---- SCREENSHOT TABLE BUTTON ---- */
+.tbl-screenshot-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--navy); color: #fff;
+  border: none; padding: 4px 10px; cursor: pointer;
+  font: 600 11px "DM Sans"; letter-spacing: .03em;
+  transition: background .15s; white-space: nowrap;
+}
+.tbl-screenshot-btn:hover:not(:disabled) { background: #0f2660; }
+.tbl-screenshot-btn:disabled { opacity: .5; cursor: wait; }
+.verify-ss-btn {
+  background: transparent; color: var(--navy); border: 1.5px solid var(--navy);
+  padding: 6px 14px; font-size: 12px; margin-bottom: 12px;
+}
+.verify-ss-btn:hover { background: var(--navy); color: white; }
+.verify-screenshot-cta { margin: 8px 0; }
+.td-screenshot { white-space: nowrap; }
+.tbl-no-screenshot { color: var(--muted); font-size: 13px; }
+
+/* ---- MANAGE COLUMN ---- */
+.tbl-manage-cell {
+  display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 120px;
+}
+.tbl-edit-btn,
+.tbl-delete-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  border: 1px solid; padding: 4px 8px; cursor: pointer;
+  font: 600 11px "DM Sans"; transition: all .15s; white-space: nowrap;
+}
+.tbl-edit-btn {
+  background: white; color: var(--navy); border-color: var(--navy);
+}
+.tbl-edit-btn:hover { background: var(--navy); color: white; }
+.tbl-delete-btn {
+  background: white; color: var(--red); border-color: var(--red);
+}
+.tbl-delete-btn:hover { background: var(--red); color: white; }
+
+/* ---- EDIT MODAL ---- */
+.admin-edit-modal { max-width: 620px; width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modal-icon-edit { color: var(--navy); }
+.edit-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 16px 0;
+}
+.edit-field { display: grid; gap: 4px; }
+.edit-field-full { grid-column: 1 / -1; }
+.edit-field label {
+  font: 700 10px "Oswald"; letter-spacing: .1em; color: var(--muted);
+}
+.edit-input {
+  border: 1.5px solid #d4cfc3; padding: 9px 12px;
+  font: 500 13px "DM Sans"; outline: none;
+  transition: border-color .15s; width: 100%;
+}
+.edit-input:focus { border-color: var(--navy); }
+.edit-input.error { border-color: var(--red); }
+.edit-input option { font-size: 13px; }
+.edit-error { font-size: 11px; color: var(--red); font-weight: 600; }
+.edit-hint { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
+@media (max-width: 520px) {
+  .edit-form-grid { grid-template-columns: 1fr; }
+  .edit-field-full { grid-column: 1; }
+}
+
+/* ---- DELETE MODAL ---- */
+.delete-confirm-block {
+  background: #fdf3f3; border: 1px solid #f5c6c6;
+  padding: 14px 18px; margin: 12px 0; text-align: center;
+}
+.delete-confirm-name { font: 600 17px "DM Sans"; color: var(--navy); }
+.delete-confirm-detail { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.delete-warning {
+  background: #fff8e6; border-left: 3px solid var(--gold);
+  padding: 10px 14px; font-size: 12px; color: #5a4200; margin: 12px 0; text-align: left;
+}
+
+/* ---- SCREENSHOT MODAL (full view) ---- */
+.admin-screenshot-modal { max-width: 680px; width: 95vw; max-height: 90vh; overflow-y: auto; }
+.screenshot-full-wrap {
+  width: 100%; margin: 16px 0; text-align: center;
+  background: #f9f7f2; border: 1px solid #ddd8ca;
+}
+.screenshot-full-img {
+  max-width: 100%; max-height: 60vh; object-fit: contain; display: block; margin: 0 auto;
+}
+.screenshot-filename { font-size: 11px; color: var(--muted); display: block; text-align: center; }
+
+/* ---- TABLE FOOTER ---- */
+.table-footer {
+  padding: 10px 20px; font-size: 12px; color: var(--muted);
+  border-top: 1px solid #e8e4d8; text-align: right;
+}
+.td-ref-small { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+
+/* ---- TABLE HORIZONTAL SCROLL ---- */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 900px; }

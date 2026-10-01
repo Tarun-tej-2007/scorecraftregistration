@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
 import { requireAdmin } from "@/lib/adminAuth";
 
-const ALLOWED_YEARS = ["3rd Year", "4th Year"];
+const ALLOWED_YEARS = ["2nd Year", "3rd Year", "4th Year"];
 const ALLOWED_DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "Other"];
 
 // ─────────────────────────────────────────────────────────
@@ -59,7 +59,9 @@ export async function PUT(
     if (!department || !ALLOWED_DEPARTMENTS.includes(department))
       return NextResponse.json({ message: "Invalid department." }, { status: 400 });
     if (!year || !ALLOWED_YEARS.includes(year))
-      return NextResponse.json({ message: "Only 3rd and 4th year students are eligible." }, { status: 400 });
+      return NextResponse.json({ message: "Only 2nd, 3rd, and 4th year students are eligible." }, { status: 400 });
+    if (year === "2nd Year" && department !== "CSE" && department !== "IT")
+      return NextResponse.json({ message: "2nd Year students must select CSE or IT." }, { status: 400 });
 
     const updateData: Record<string, unknown> = {
       name:       name.trim(),

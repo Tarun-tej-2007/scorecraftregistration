@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Registration } from "@/lib/models/Registration";
 
 const REGISTRATION_LIMIT = 180;
-const ALLOWED_YEARS = ["3rd Year", "4th Year"];
+const ALLOWED_YEARS = ["2nd Year", "3rd Year", "4th Year"];
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +16,11 @@ export async function POST(request: Request) {
     }
 
     if (!ALLOWED_YEARS.includes(body.year)) {
-      return NextResponse.json({ message: "Only 3rd and 4th year students are eligible." }, { status: 400 });
+      return NextResponse.json({ message: "Only 2nd, 3rd and 4th year students are eligible." }, { status: 400 });
+    }
+
+    if (body.year === "2nd Year" && !["CSE", "IT"].includes(body.department)) {
+      return NextResponse.json({ message: "2nd Year students must select CSE or IT." }, { status: 400 });
     }
 
     console.log("[/api/registrations] MONGODB_URI defined:", !!process.env.MONGODB_URI);

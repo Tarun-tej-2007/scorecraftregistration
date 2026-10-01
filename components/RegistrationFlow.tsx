@@ -48,7 +48,7 @@ type AdminStatus = {
 };
 
 const DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "Other"];
-const YEARS = ["3rd Year", "4th Year"];
+const YEARS = ["2nd Year", "3rd Year", "4th Year"];
 
 const initialForm: FormData = {
   name: "",
@@ -97,7 +97,15 @@ export default function RegistrationFlow() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const update = (key: keyof FormData, value: string) =>
-    setForm((c) => ({ ...c, [key]: value }));
+    setForm((c) => {
+      const next = { ...c, [key]: value };
+      if (key === "year" && value === "2nd Year") {
+        if (next.department && next.department !== "CSE" && next.department !== "IT") {
+          next.department = "";
+        }
+      }
+      return next;
+    });
 
   // ── On mount: attempt to resume a pending registration ──────
   // This is the core persistence fix. React state is volatile
@@ -455,7 +463,7 @@ export default function RegistrationFlow() {
             <div><b>ACADEMIC DETAILS</b><small>Help us place you correctly</small></div>
           </div>
           <div className="form-grid">
-            <SelectField label="Department" value={form.department} onChange={(v) => update("department", v)} options={DEPARTMENTS} />
+            <SelectField label="Department" value={form.department} onChange={(v) => update("department", v)} options={form.year === "2nd Year" ? ["CSE", "IT"] : DEPARTMENTS} />
             <SelectField label="Year" value={form.year} onChange={(v) => update("year", v)} options={YEARS} />
           </div>
 

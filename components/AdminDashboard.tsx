@@ -90,7 +90,7 @@ type ModalState =
 // ─────────────────────────────────────────────────────────
 
 const DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "Other"];
-const YEARS       = ["3rd Year", "4th Year"];
+const YEARS       = ["2nd Year", "3rd Year", "4th Year"];
 
 const P_STATUS: Record<string, { label: string; cls: string }> = {
   PENDING:   { label: "PENDING",   cls: "pill-muted"    },
@@ -530,14 +530,23 @@ export default function AdminDashboard() {
                   onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))}
                   className={editErrors.department ? "edit-input error" : "edit-input"}>
                   <option value="">Select department</option>
-                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  {(editForm.year === "2nd Year" ? ["CSE", "IT"] : DEPARTMENTS).map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
                 {editErrors.department && <span className="edit-error">{editErrors.department}</span>}
               </div>
               <div className="edit-field">
                 <label>YEAR *</label>
                 <select value={editForm.year}
-                  onChange={(e) => setEditForm((f) => ({ ...f, year: e.target.value }))}
+                  onChange={(e) => {
+                    const newYear = e.target.value;
+                    setEditForm((f) => {
+                      const next = { ...f, year: newYear };
+                      if (newYear === "2nd Year" && next.department !== "CSE" && next.department !== "IT") {
+                        next.department = "";
+                      }
+                      return next;
+                    });
+                  }}
                   className={editErrors.year ? "edit-input error" : "edit-input"}>
                   <option value="">Select year</option>
                   {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}

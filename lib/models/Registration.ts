@@ -58,7 +58,7 @@ const RegistrationSchema = new Schema<IRegistration>(
     email:        { type: String, required: true, trim: true, lowercase: true },
     phone:        { type: String, required: true, trim: true },
     department:   { type: String, required: true },
-    year:         { type: String, required: true, enum: ["3rd Year", "4th Year"] },
+    year:         { type: String, required: true, enum: ["2nd Year", "3rd Year", "4th Year"] },
 
     amount:        { type: Number, default: 250 },
     paymentMethod: { type: String, default: "UPI_QR" },

@@ -14,6 +14,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 // ─────────────────────────────────────────────────────────
 // Types
@@ -719,12 +720,19 @@ export default function RegistrationFlow() {
 
           {/* If admin has verified or rejected */}
           {adminStatus?.registrationStatus === "CONFIRMED" && (
-            <div className="admin-confirmed-banner">
-              <span className="admin-confirmed-icon">✓</span>
-              <div>
-                <b>REGISTRATION CONFIRMED</b>
-                <p>Registration ID: <strong>{adminStatus.registrationId}</strong></p>
-                <p className="small-muted">Verified at {adminStatus.verifiedAt ? new Date(adminStatus.verifiedAt).toLocaleString() : ""}</p>
+            <div className="admin-confirmed-banner" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                <span className="admin-confirmed-icon">✓</span>
+                <div>
+                  <b>REGISTRATION CONFIRMED</b>
+                  <p>Register Number: <strong>{form.registerNo}</strong></p>
+                  <p className="small-muted">Verified at {adminStatus.verifiedAt ? new Date(adminStatus.verifiedAt).toLocaleString() : ""}</p>
+                </div>
+              </div>
+              <div style={{ background: "white", padding: 16, borderRadius: 8, textAlign: "center" }}>
+                <p style={{ fontWeight: "bold", marginBottom: 8, color: "#111" }}>ATTENDANCE QR</p>
+                <QRCodeSVG value={form.registerNo} size={150} />
+                <p style={{ marginTop: 8, fontSize: "0.8rem", color: "#666" }}>SCAN THIS QR AT THE ATTENDANCE DESK</p>
               </div>
             </div>
           )}

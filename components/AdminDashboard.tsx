@@ -616,9 +616,14 @@ export default function AdminDashboard() {
       <div className="admin-top">
         <Link href="/" className="back-link"><ArrowLeft size={18} /> Back to event</Link>
         <div className="admin-brand"><ShieldCheck size={20} /> SCORECRAFT ADMIN</div>
-        <button className="secondary-button" onClick={handleLogout} style={{ marginLeft: "auto" }}>
-          Logout
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
+          <Link href="/admin/attendance" className="secondary-button" style={{ textDecoration: "none" }}>
+            Attendance Portal
+          </Link>
+          <button className="secondary-button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="admin-shell">

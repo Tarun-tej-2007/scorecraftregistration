@@ -33,6 +33,8 @@ export async function GET(request: Request) {
         registrationId: p?.registrationId || "—",
         date: record.date,
         day: record.day,
+        session: record.session,
+        sessionId: record.sessionId,
         status: record.status,
         markedAt: record.markedAt,
         method: record.method,

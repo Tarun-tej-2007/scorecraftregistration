@@ -10,10 +10,10 @@ export async function POST(request: Request) {
 
   try {
     await connectDB();
-    const { registerNumber, date, day, method } = await request.json();
+    const { registerNumber, sessionId, session, date, method } = await request.json();
 
     if (!registerNumber) return NextResponse.json({ message: "Register number is required." }, { status: 400 });
-    if (!date || !day) return NextResponse.json({ message: "Date and day are required." }, { status: 400 });
+    if (!sessionId || !session || !date) return NextResponse.json({ message: "Session details are required." }, { status: 400 });
 
     const cleanRegisterNo = registerNumber.trim().toUpperCase();
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Prevent duplicate attendance
-    const existing = await Attendance.findOne({ registerNumber: cleanRegisterNo, date });
+    const existing = await Attendance.findOne({ registerNumber: cleanRegisterNo, sessionId });
     if (existing) {
       return NextResponse.json({ message: "ALREADY MARKED", participant, attendance: existing }, { status: 200 });
     }
@@ -37,8 +37,10 @@ export async function POST(request: Request) {
     // 3. Mark attendance
     const attendance = await Attendance.create({
       registerNumber: cleanRegisterNo,
+      sessionId,
+      session,
+      day: 1, // keeping day for legacy compat if needed, but session info is primary
       date,
-      day,
       status: "PRESENT",
       markedBy: "ADMIN",
       method: method || "MANUAL",
